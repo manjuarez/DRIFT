@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRIFT® — Engineered for the Unforgiving</title>
+
+  <!-- Google Fonts: Inter (Corporate Minimalist), JetBrains Mono (Clinical/Telemetry), Cormorant Garamond (Editorial/Distressed Accent) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ==========================================================================
+       DYNAMIC SCROLL-LINKED CSS CUSTOM PROPERTIES
+       Updated continuously via requestAnimationFrame scroll interpolation
+       ========================================================================== */
+    :root {
+      --bg-primary: rgb(248, 249, 250);
+      --bg-card: rgb(255, 255, 255);
+      --bg-elevated: rgb(241, 245, 249);
+      --text-primary: rgb(15, 23, 42);
+      --text-secondary: rgb(71, 85, 105);
+      --text-muted: rgb(100, 116, 139);
+      --border-subtle: rgb(226, 232, 240);
+      --accent-color: rgb(234, 179, 8);
+      --accent-contrast: rgb(15, 23, 42);
+      --nav-bg: rgba(248, 249, 250, 0.85);
+      --grain-opacity: 0;
+      --vignette-opacity: 0;
+      --red-tint-opacity: 0;
+      --spotlight-opacity: 0;
+      --cursor-x: 50vw;
+      --cursor-y: 50vh;
+      --scroll-progress: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+      transition: background-color 0.08s linear, color 0.08s linear;
+    }
+
+    /* Dynamic Surface & Typography Utilities Bound to Scroll Variables */
+    .surface-primary {
+      background-color: var(--bg-primary);
+    }
+
+    .surface-card {
+      background-color: var(--bg-card);
+      border-color: var(--border-subtle);
+      transition: background-color 0.12s linear, border-color 0.12s linear, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    }
+
+    .surface-elevated {
+      background-color: var(--bg-elevated);
+      border-color: var(--border-subtle);
+    }
+
+    .text-dyn-primary {
+      color: var(--text-primary);
+    }
+
+    .text-dyn-secondary {
+      color: var(--text-secondary);
+    }
+
+    .text-dyn-muted {
+      color: var(--text-muted);
+    }
+
+    .border-dyn {
+      border-color: var(--border-subtle);
+    }
+
+    .nav-glass {
+      background-color: var(--nav-bg);
+      border-color: var(--border-subtle);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    /* ==========================================================================
+       ATMOSPHERIC OVERLAYS (GRAIN, SPOTLIGHT, CRIMSON VIGNETTE, HEARTBEAT)
+       ========================================================================== */
+    .film-grain-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 60;
+      opacity: var(--grain-opacity);
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      animation: grainShift 0.35s steps(2) infinite;
+    }
+
+    @keyframes grainShift {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(-1%, 1%); }
+      50% { transform: translate(1%, -1%); }
+      75% { transform: translate(-1%, -1%); }
+      100% { transform: translate(1%, 1%); }
+    }
+
+    /* Flashlight / Ambient Cursor Spotlight in Lower Dark Sections */
+    .cursor-spotlight-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 45;
+      opacity: var(--spotlight-opacity);
+      background: radial-gradient(
+        circle 380px at var(--cursor-x) var(--cursor-y),
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(0, 0, 0, 0.45) 55%,
+        rgba(0, 0, 0, 0.86) 100%
+      );
+      transition: opacity 0.25s ease;
+    }
+
+    /* Red Vignette & Climax Heartbeat Pulse */
+    .crimson-vignette-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      opacity: var(--vignette-opacity);
+      background: radial-gradient(
+        circle at 50% 50%,
+        transparent 45%,
+        rgba(127, 29, 29, 0.28) 82%,
+        rgba(69, 10, 10, 0.72) 100%
+      );
+    }
+
+    .heartbeat-active {
+      animation: cardiacPulse 1.65s infinite ease-in-out;
+    }
+
+    @keyframes cardiacPulse {
+      0%, 100% {
+        box-shadow: inset 0 0 60px rgba(153, 27, 27, 0.12);
+        transform: scale(1);
+      }
+      14% {
+        box-shadow: inset 0 0 130px rgba(220, 38, 38, 0.38);
+        transform: scale(1.003);
+      }
+      28% {
+        box-shadow: inset 0 0 70px rgba(153, 27, 27, 0.16);
+        transform: scale(1);
+      }
+      42% {
+        box-shadow: inset 0 0 115px rgba(220, 38, 38, 0.32);
+        transform: scale(1.002);
+      }
+    }
+
+    /* ==========================================================================
+       MICRO-GLITCH & HORROR TEXT EFFECTS
+       ========================================================================== */
+    .glitch-text {
+      position: relative;
+      display: inline-block;
+    }
+
+    .glitch-active {
+      animation: textJitter 0.28s steps(2) infinite;
+      text-shadow: -1.5px 0 rgba(220, 38, 38, 0.85), 1.5px 0 rgba(56, 189, 248, 0.65);
+    }
+
+    @keyframes textJitter {
+      0% { transform: translate(0, 0) skewX(0deg); }
+      25% { transform: translate(-1.5px, 0.5px) skewX(-2deg); }
+      50% { transform: translate(1.5px, -0.5px) skewX(2deg); }
+      75% { transform: translate(-1px, -0.5px) skewX(0deg); }
+      100% { transform: translate(0, 0) skewX(0deg); }
+    }
+
+    /* Star Rating Forced Glitch Animation for Review #4 */
+    @keyframes starHijackFlash {
+      0% { transform: scale(1); filter: brightness(1); }
+      20% { transform: scale(1.18) skewX(-8deg); color: #ef4444; filter: brightness(1.6); }
+      40% { transform: scale(0.92) skewX(8deg); color: #ffffff; }
+      60% { transform: scale(1.12); color: #dc2626; }
+      80% { transform: scale(0.98); }
+      100% { transform: scale(1); color: #dc2626; }
+    }
+
+    .star-hijack-anim {
+      animation: starHijackFlash 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* ==========================================================================
+       STAGE 2: INTERACTIVE MICRO-WEAVE FABRIC INSPECTOR
+       ========================================================================== */
+    .fabric-inspector-container {
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .fabric-hidden-layer {
+      position: absolute;
+      inset: 0;
+      clip-path: circle(0px at 50% 50%);
+      transition: clip-path 0.08s ease-out;
+      pointer-events: none;
+    }
+
+    .fabric-inspector-container.is-inspecting .fabric-hidden-layer {
+      clip-path: circle(115px at var(--loupe-x, 50%) var(--loupe-y, 50%));
+    }
+
+    .fabric-inspector-container.force-reveal .fabric-hidden-layer {
+      clip-path: circle(75% at 50% 50%);
+      transition: clip-path 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .loupe-ring {
+      position: absolute;
+      width: 230px;
+      height: 230px;
+      border-radius: 9999px;
+      border: 1.5px solid rgba(220, 38, 38, 0.75);
+      box-shadow: 0 0 28px rgba(220, 38, 38, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.65);
+      transform: translate(-50%, -50%);
+      left: var(--loupe-x, 50%);
+      top: var(--loupe-y, 50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .fabric-inspector-container.is-inspecting .loupe-ring {
+      opacity: 1;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #991b1b;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-red-900 selection:text-white">
+
+  <!-- Atmospheric Fixed Viewport Layers -->
+  <div class="film-grain-overlay" aria-hidden="true"></div>
+  <div id="cursorSpotlight" class="cursor-spotlight-overlay" aria-hidden="true"></div>
+  <div id="crimsonVignette" class="crimson-vignette-overlay" aria-hidden="true"></div>
+
+  <!-- ========================================================================
+       MUTATING TOP ANNOUNCEMENT BAR
+       ======================================================================== -->
+  <div id="announcementBar" class="w-full py-2 px-4 text-center text-xs font-medium tracking-wide transition-colors duration-300 border-b border-dyn surface-elevated relative z-40">
+    <div class="max-w-7xl mx-auto flex items-center justify-center gap-2">
+      <span id="announcementDot" class="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block transition-colors duration-300"></span>
+      <span id="announcementText" class="transition-opacity duration-200">Complimentary express shipping on orders over $150</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       STICKY MINIMALIST NAVIGATION BAR
+       ======================================================================== -->
+  <header class="sticky top-0 z-40 nav-glass border-b transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Brand Wordmark -->
+      <a href="#" class="flex items-center gap-2.5 group focus:outline-none">
+        <span class="w-3 h-3 rounded-xs bg-amber-400 inline-block transition-colors duration-500" id="brandSquare"></span>
+        <span id="brandLogoText" class="text-xl font-bold tracking-[0.22em] uppercase text-dyn-primary glitch-text">
+          DRIFT<sup class="text-[10px] font-normal tracking-normal ml-0.5">®</sup>
+        </span>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="hidden md:flex items-center gap-8 text-xs font-medium uppercase tracking-[0.14em] text-dyn-secondary">
+        <a href="#collection" class="hover:text-dyn-primary transition-colors">Collection</a>
+        <a href="#technology" class="hover:text-dyn-primary transition-colors">Technology</a>
+        <a href="#sizing" class="hover:text-dyn-primary transition-colors">Sizing</a>
+        <a href="#reviews" class="hover:text-dyn-primary transition-colors">Reviews</a>
+      </nav>
+
+      <!-- Bag Button -->
+      <div class="flex items-center gap-3">
+        <button
+          id="bagTriggerBtn"
+          type="button"
+          class="px-3.5 py-2 rounded-lg text-xs font-medium tracking-wider uppercase border border-dyn surface-card text-dyn-primary hover:opacity-85 transition-all flex items-center gap-2 cursor-pointer"
+          aria-label="Open shopping bag"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          <span id="bagCountLabel">Bag (0)</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       SLIDE-OVER BAG DRAWER (TURNS UNCANNY WHEN ITEMS ARE ADDED)
+       ======================================================================== -->
+  <div id="bagDrawerBackdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden opacity-0 transition-opacity duration-300"></div>
+  <aside
+    id="bagDrawer"
+    class="fixed top-0 right-0 h-full w-full max-w-md surface-card border-l border-dyn z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col justify-between p-6 shadow-2xl"
+    aria-label="Shopping Bag"
+  >
+    <div>
+      <div class="flex items-center justify-between pb-4 border-b border-dyn">
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-[0.18em] text-dyn-primary">Your Containment Bag</h2>
+          <p id="bagSubStatus" class="text-xs text-dyn-muted mt-0.5 font-mono">Standard Dispatch Queue</p>
+        </div>
+        <button id="closeBagBtn" type="button" class="p-2 rounded-lg text-dyn-secondary hover:text-dyn-primary cursor-pointer" aria-label="Close bag">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Bag Items List -->
+      <div id="bagItemsContainer" class="py-6 space-y-4 max-h-[55vh] overflow-y-auto">
+        <div id="emptyBagState" class="text-center py-12">
+          <p class="text-sm text-dyn-secondary">Your bag is currently empty.</p>
+          <p class="text-xs text-dyn-muted mt-1">Select a shell below to initialize allocation.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bag Footer -->
+    <div id="bagFooter" class="pt-4 border-t border-dyn space-y-3 hidden">
+      <div class="p-3 rounded-lg bg-red-950/20 border border-red-900/40 text-xs font-mono text-red-400 space-y-1">
+        <div class="flex justify-between">
+          <span>DELIVERY METHOD:</span>
+          <span>UNATTENDED DROP</span>
+        </div>
+        <div class="flex justify-between">
+          <span>DESTINATION:</span>
+          <span id="bagDestinationText">HALLWAY CLOSET (VERIFIED)</span>
+        </div>
+      </div>
+      <div class="flex justify-between text-sm font-medium text-dyn-primary">
+        <span>Total Allocation</span>
+        <span id="bagTotalPrice" class="font-mono">$0.00</span>
+      </div>
+      <button
+        type="button"
+        disabled
+        class="w-full py-3.5 px-4 rounded-xl bg-red-950 text-red-200 border border-red-800/70 text-xs font-mono uppercase tracking-[0.16em] cursor-not-allowed opacity-90"
+      >
+        PAYMENT ALREADY SETTLED • NO RETURNS
+      </button>
+    </div>
+  </aside>
+
+  <!-- ========================================================================
+       STAGE 1: HERO SECTION (0% - 20% SCROLL) — 100% GENERIC CORPORATE MINIMALIST
+       ======================================================================== -->
+  <main>
+    <section id="hero" class="relative pt-12 pb-20 sm:pt-20 sm:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+        <!-- Left Copy Column -->
+        <div class="lg:col-span-6 space-y-6">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-dyn surface-card text-[11px] font-mono uppercase tracking-[0.15em] text-dyn-secondary">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            Series 04 — Scandinavian Technical Outerwear
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.08] text-dyn-primary">
+            Engineered for the Unforgiving.
+          </h1>
+
+          <p class="text-base sm:text-lg text-dyn-secondary leading-relaxed max-w-xl font-normal">
+            Three-layer HydroLock™ membrane shells designed to keep the elements out—no matter how hard it pours.
+          </p>
+
+          <div class="pt-2 flex flex-wrap items-center gap-4">
+            <a
+              href="#technology"
+              class="px-6 py-3.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-medium tracking-wide transition-all shadow-sm inline-flex items-center gap-2"
+            >
+              <span>Explore the Shell</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </a>
+            <a
+              href="#collection"
+              class="px-6 py-3.5 rounded-xl border border-dyn surface-card text-dyn-primary hover:opacity-80 text-sm font-medium tracking-wide transition-all"
+            >
+              View Collection
+            </a>
+          </div>
+
+          <!-- Clean Technical Specs Strip -->
+          <div class="pt-6 border-t border-dyn grid grid-cols-3 gap-4 max-w-lg">
+            <div>
+              <p class="text-xs font-mono text-dyn-muted uppercase">Hydrostatic</p>
+              <p class="text-sm sm:text-base font-semibold text-dyn-primary mt-0.5">20,000 mm</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-dyn-muted uppercase">Seam Sealing</p>
+              <p class="text-sm sm:text-base font-semibold text-dyn-primary mt-0.5">100% Welded</p>
+            </div>
+            <div>
+              <p class="text-xs font-mono text-dyn-muted uppercase">Shell Weight</p>
+              <p class="text-sm sm:text-base font-semibold text-dyn-primary mt-0.5">640g Polymer</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Visual Column: Sleek Technical Blueprint SVG of Yellow/Charcoal Waterproof Trench Coat -->
+        <div class="lg:col-span-6">
+          <div class="relative rounded-2xl border border-dyn surface-card p-6 sm:p-10 shadow-sm overflow-hidden">
+            <!-- Technical Blueprint Grid Background -->
+            <div
+              class="absolute inset-0 opacity-35 pointer-events-none"
+              style="background-image: linear-gradient(to right, rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.18) 1px, transparent 1px); background-size: 28px 28px;"
+            ></div>
+
+            <!-- Corner Telemetry Labels -->
+            <div class="relative z-10 flex justify-between items-center text-[11px] font-mono text-dyn-muted mb-4">
+              <span>FIG 01. HYDROLOCK™ TRENCH SHELL</span>
+              <span>COLOR: SIGNAL YELLOW / SLATE</span>
+            </div>
+
+            <!-- Custom Architectural Trench Coat SVG with Callouts -->
+            <div class="relative z-10 flex justify-center py-2">
+              <svg viewBox="0 0 460 440" class="w-full max-w-md h-auto" role="img" aria-label="Technical illustration of DRIFT Series 04 Yellow and Charcoal Waterproof Trench Coat">
+                <defs>
+                  <linearGradient id="coatYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FACC15" />
+                    <stop offset="65%" stop-color="#EAB308" />
+                    <stop offset="100%" stop-color="#CA8A04" />
+                  </linearGradient>
+                  <linearGradient id="coatCharcoal" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#334155" />
+                    <stop offset="100%" stop-color="#0F172A" />
+                  </linearGradient>
+                </defs>
+
+                <!-- Subtle Ground Shadow -->
+                <ellipse cx="230" cy="414" rx="105" ry="10" fill="rgba(15, 23, 42, 0.08)" />
+
+                <!-- Hood & High Storm Collar -->
+                <path d="M188 54 C188 30, 272 30, 272 54 L282 88 L178 88 Z" fill="url(#coatCharcoal)" stroke="#0F172A" stroke-width="2" />
+                <path d="M196 58 C205 42, 255 42, 264 58 L266 84 L194 84 Z" fill="#1E293B" />
+                <!-- Collar Chin Guard -->
+                <rect x="195" y="74" width="70" height="22" rx="4" fill="url(#coatYellow)" stroke="#0F172A" stroke-width="2" />
+
+                <!-- Left & Right Sleeves -->
+                <path d="M178 92 L120 128 L96 276 L124 282 L152 162 L162 150 Z" fill="url(#coatYellow)" stroke="#0F172A" stroke-width="2" stroke-linejoin="round" />
+                <path d="M282 92 L340 128 L364 276 L336 282 L308 162 L298 150 Z" fill="url(#coatYellow)" stroke="#0F172A" stroke-width="2" stroke-linejoin="round" />
+
+                <!-- Charcoal Reinforced Cuffs -->
+                <path d="M96 272 L125 278 L121 296 L92 290 Z" fill="url(#coatCharcoal)" stroke="#0F172A" stroke-width="1.8" />
+                <path d="M364 272 L335 278 L339 296 L368 290 Z" fill="url(#coatCharcoal)" stroke="#0F172A" stroke-width="1.8" />
+
+                <!-- Main Trench Body (Full-Calf A-Line Silhouette) -->
+                <path d="M178 92 L282 92 L304 168 L322 394 L138 394 L156 168 Z" fill="url(#coatYellow)" stroke="#0F172A" stroke-width="2.2" stroke-linejoin="round" />
+
+                <!-- Charcoal Shoulder Yoke Panel -->
+                <path d="M178 92 L282 92 L292 134 L230 144 L168 134 Z" fill="url(#coatCharcoal)" stroke="#0F172A" stroke-width="1.8" />
+
+                <!-- Center Welded Storm Placket -->
+                <rect x="223" y="94" width="14" height="300" fill="#1E293B" stroke="#0F172A" stroke-width="1.5" />
+                <!-- Placket Snap Studs -->
+                <circle cx="230" cy="112" r="2.2" fill="#94A3B8" />
+                <circle cx="230" cy="164" r="2.2" fill="#94A3B8" />
+                <circle cx="230" cy="216" r="2.2" fill="#94A3B8" />
+                <circle cx="230" cy="268" r="2.2" fill="#94A3B8" />
+                <circle cx="230" cy="320" r="2.2" fill="#94A3B8" />
+                <circle cx="230" cy="372" r="2.2" fill="#94A3B8" />
+
+                <!-- Angled Waterproof Welt Pockets -->
+                <line x1="164" y1="238" x2="196" y2="254" stroke="#0F172A" stroke-width="3" stroke-linecap="round" />
+                <line x1="296" y1="238" x2="264" y2="254" stroke="#0F172A" stroke-width="3" stroke-linecap="round" />
+
+                <!-- Technical Callout Lines & Labels -->
+                <!-- Callout 1: Storm Hood -->
+                <polyline points="268,54 316,38 345,38" fill="none" stroke="#64748B" stroke-width="1.2" />
+                <circle cx="268" cy="54" r="3" fill="#0F172A" />
+                <text x="350" y="35" font-family="JetBrains Mono, monospace" font-size="9" fill="#475569" font-weight="600">01. STORM HOOD</text>
+                <text x="350" y="46" font-family="JetBrains Mono, monospace" font-size="8" fill="#64748B">360° Cinch Seal</text>
+
+                <!-- Callout 2: 3L Membrane -->
+                <polyline points="175,185 112,185 88,185" fill="none" stroke="#64748B" stroke-width="1.2" />
+                <circle cx="175" cy="185" r="3" fill="#0F172A" />
+                <text x="12" y="182" font-family="JetBrains Mono, monospace" font-size="9" fill="#475569" font-weight="600">02. HYDROLOCK™</text>
+                <text x="12" y="193" font-family="JetBrains Mono, monospace" font-size="8" fill="#64748B">Non-Porous 3L</text>
+
+                <!-- Callout 3: Sealed Placket -->
+                <polyline points="237,295 318,295 345,295" fill="none" stroke="#64748B" stroke-width="1.2" />
+                <circle cx="237" cy="295" r="3" fill="#0F172A" />
+                <text x="350" y="292" font-family="JetBrains Mono, monospace" font-size="9" fill="#475569" font-weight="600">03. LOCK TRACK</text>
+                <text x="350" y="303" font-family="JetBrains Mono, monospace" font-size="8" fill="#64748B">Welded Closure</text>
+
+                <!-- Callout 4: Extended Hem -->
+                <polyline points="145,375 95,375 72,375" fill="none" stroke="#64748B" stroke-width="1.2" />
+                <circle cx="145" cy="375" r="3" fill="#0F172A" />
+                <text x="12" y="372" font-family="JetBrains Mono, monospace" font-size="9" fill="#475569" font-weight="600">04. CALF DROP</text>
+                <text x="12" y="383" font-family="JetBrains Mono, monospace" font-size="8" fill="#64748B">Full Coverage</text>
+              </svg>
+            </div>
+
+            <div class="relative z-10 flex justify-between items-center text-[11px] font-mono text-dyn-muted pt-3 border-t border-dyn">
+              <span>ISO-811 CERTIFIED</span>
+              <span>BATCH #04-A // STOCKED</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         STAGE 2: MATERIAL TECHNOLOGY & INTERACTIVE FABRIC INSPECTOR (20% - 40% SCROLL)
+         Slightly Uncanny: Pivots from keeping weather OUT to keeping things IN
+         ======================================================================== -->
+    <section id="technology" class="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-dyn">
+      <div class="max-w-2xl mb-14">
+        <p class="text-xs font-mono uppercase tracking-[0.2em] text-dyn-muted mb-3">01 // Containment Architecture</p>
+        <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight text-dyn-primary">
+          Engineered beyond weather resistance.
+        </h2>
+        <p class="text-base text-dyn-secondary mt-3 leading-relaxed">
+          Conventional rainwear merely deflects external precipitation. DRIFT® textiles are laminated with a dense, non-porous inner barrier designed for complete environmental isolation.
+        </p>
+      </div>
+
+      <!-- 3-Column Feature Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-14">
+        <!-- Feature 1 -->
+        <div class="surface-card border rounded-2xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl surface-elevated border border-dyn flex items-center justify-center mb-5 text-dyn-primary">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-dyn-primary mb-2.5">Zero Fluid Transfer</h3>
+            <p class="text-sm text-dyn-secondary leading-relaxed">
+              Impermeable inner polymer prevents moisture, rain, or any other liquids from soaking through to your clothes—or the floorboards.
+            </p>
+          </div>
+          <div class="mt-6 pt-4 border-t border-dyn flex items-center justify-between text-[11px] font-mono text-dyn-muted">
+            <span>PERMEABILITY: 0.00%</span>
+            <span>SEALED</span>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="surface-card border rounded-2xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl surface-elevated border border-dyn flex items-center justify-center mb-5 text-dyn-primary">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-dyn-primary mb-2.5">Acoustic Dampening Weave</h3>
+            <p class="text-sm text-dyn-secondary leading-relaxed">
+              Silences heavy wind, driving rain, and muffled vocalizations.
+            </p>
+          </div>
+          <div class="mt-6 pt-4 border-t border-dyn flex items-center justify-between text-[11px] font-mono text-dyn-muted">
+            <span>ATTENUATION: -38 dB</span>
+            <span>ISOLATED</span>
+          </div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="surface-card border rounded-2xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl surface-elevated border border-dyn flex items-center justify-center mb-5 text-dyn-primary">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-dyn-primary mb-2.5">Reinforced Tear-Resistance</h3>
+            <p class="text-sm text-dyn-secondary leading-relaxed">
+              Tested against sharp branches, gravel drags, and sudden, violent resistance.
+            </p>
+          </div>
+          <div class="mt-6 pt-4 border-t border-dyn flex items-center justify-between text-[11px] font-mono text-dyn-muted">
+            <span>TENSILE: 1,450 N</span>
+            <span>UNYIELDING</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive "Micro-Weave Inspector" Box -->
+      <div class="surface-card border rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              <h3 class="text-sm font-mono uppercase tracking-[0.16em] text-dyn-primary font-semibold">
+                Micro-Weave Inspector // 400x Polymer Scan
+              </h3>
+            </div>
+            <p class="text-xs text-dyn-secondary mt-1">
+              Move your cursor (or drag across the sample) to inspect the sub-surface HydroLock™ lining.
+            </p>
+          </div>
+          <button
+            id="toggleRevealBtn"
+            type="button"
+            class="self-start sm:self-auto px-3.5 py-2 rounded-lg border border-dyn surface-elevated text-xs font-mono uppercase tracking-wider text-dyn-primary hover:opacity-80 transition cursor-pointer"
+          >
+            Toggle Full Scan
+          </button>
+        </div>
+
+        <!-- Interactive Inspection Viewport -->
+        <div
+          id="fabricInspector"
+          class="fabric-inspector-container w-full h-72 sm:h-80 rounded-xl border border-dyn relative"
+          aria-label="Interactive fabric weave inspector"
+        >
+          <!-- Layer 1 (Top Clean Surface): Geometric Ripstop Textile Pattern -->
+          <div class="absolute inset-0 bg-slate-800 flex items-center justify-center">
+            <svg class="w-full h-full opacity-90" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="ripstopGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                  <rect width="24" height="24" fill="#1e293b" />
+                  <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#334155" stroke-width="1" />
+                  <path d="M 12 0 L 12 24 M 0 12 L 24 12" fill="none" stroke="#273549" stroke-width="0.6" />
+                  <circle cx="12" cy="12" r="0.8" fill="#475569" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#ripstopGrid)" />
+            </svg>
+
+            <!-- Clean Technical Overlay Label -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4 text-center">
+              <span class="px-3 py-1 rounded bg-slate-950/75 border border-slate-700 text-[11px] font-mono text-slate-300 tracking-widest uppercase">
+                EXTERIOR SHELL: 100% VIRGIN POLYURETHANE
+              </span>
+              <span class="text-[11px] font-mono text-slate-400 mt-2">
+                [ HOVER OR DRAG LENS TO PENETRATE OUTER WEAVE ]
+              </span>
+            </div>
+          </div>
+
+          <!-- Layer 2 (Hidden Underneath): Pressed Handprint & Frantic Scratch Marks in Dark Polymer -->
+          <div class="fabric-hidden-layer bg-[#090607]">
+            <svg viewBox="0 0 800 320" preserveAspectRatio="xMidYMid slice" class="w-full h-full">
+              <defs>
+                <radialGradient id="polymerSheen" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="#1c1113" />
+                  <stop offset="70%" stop-color="#0b0708" />
+                  <stop offset="100%" stop-color="#050304" />
+                </radialGradient>
+                <filter id="smudgeBlur" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="4.5" />
+                </filter>
+                <filter id="softHandBlur" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="2.8" />
+                </filter>
+              </defs>
+
+              <rect width="800" height="320" fill="url(#polymerSheen)" />
+
+              <!-- Subtle Sub-surface Weave Grid -->
+              <g stroke="#291518" stroke-width="0.7" opacity="0.55">
+                <line x1="0" y1="40" x2="800" y2="40" />
+                <line x1="0" y1="80" x2="800" y2="80" />
+                <line x1="0" y1="120" x2="800" y2="120" />
+                <line x1="0" y1="160" x2="800" y2="160" />
+                <line x1="0" y1="200" x2="800" y2="200" />
+                <line x1="0" y1="240" x2="800" y2="240" />
+                <line x1="0" y1="280" x2="800" y2="280" />
+                <line x1="160" y1="0" x2="160" y2="320" />
+                <line x1="320" y1="0" x2="320" y2="320" />
+                <line x1="480" y1="0" x2="480" y2="320" />
+                <line x1="640" y1="0" x2="640" y2="320" />
+              </g>
+
+              <!-- Pressed Human Palm & Fingers Indentation (Eerie Smudged Imprint) -->
+              <g transform="translate(335, 58) rotate(-14)" filter="url(#softHandBlur)" opacity="0.78">
+                <!-- Palm -->
+                <path d="M35 95 C25 72, 42 52, 68 54 C94 56, 108 76, 98 104 C92 122, 82 135, 58 134 C40 133, 38 114, 35 95 Z" fill="#451a1d" />
+                <!-- Thumb -->
+                <path d="M26 98 C12 88, 6 72, 16 64 C24 58, 34 72, 38 86 Z" fill="#4c1d20" />
+                <!-- Index Finger -->
+                <path d="M40 54 C36 28, 40 8, 49 8 C57 8, 58 28, 56 54 Z" fill="#521f23" />
+                <!-- Middle Finger -->
+                <path d="M58 52 C57 20, 62 0, 71 0 C79 0, 79 22, 74 53 Z" fill="#572024" />
+                <!-- Ring Finger -->
+                <path d="M76 56 C79 28, 86 10, 94 12 C101 14, 97 34, 90 59 Z" fill="#4c1d20" />
+                <!-- Pinky Finger -->
+                <path d="M92 67 C99 46, 108 32, 114 36 C119 40, 111 56, 102 74 Z" fill="#451a1d" />
+              </g>
+
+              <!-- Dragged Fingernail Scratch Marks Gouged into the Polymer -->
+              <g stroke="#991b1b" stroke-linecap="round" opacity="0.82">
+                <path d="M372 72 C366 115, 362 165, 355 215" stroke-width="2.4" />
+                <path d="M391 66 C386 118, 380 172, 374 228" stroke-width="2.8" />
+                <path d="M412 74 C406 122, 401 174, 396 222" stroke-width="2.2" />
+                <path d="M430 92 C424 134, 419 175, 414 212" stroke-width="1.8" />
+              </g>
+
+              <!-- Secondary Desperate Clawing Gouges -->
+              <g stroke="#dc2626" stroke-linecap="round" opacity="0.55">
+                <path d="M210 140 C235 162, 260 185, 290 205" stroke-width="1.5" />
+                <path d="M218 132 C243 154, 268 177, 298 197" stroke-width="1.7" />
+                <path d="M510 110 C502 145, 495 180, 485 210" stroke-width="1.6" />
+                <path d="M522 115 C514 150, 507 185, 497 215" stroke-width="1.4" />
+              </g>
+
+              <!-- Micro-Residue Specks -->
+              <g fill="#7f1d1d" filter="url(#smudgeBlur)" opacity="0.65">
+                <circle cx="360" cy="222" r="5" />
+                <circle cx="382" cy="236" r="7" />
+                <circle cx="465" cy="184" r="4" />
+                <circle cx="295" cy="208" r="6" />
+              </g>
+
+              <!-- Forensic Scanner Telemetry Readout -->
+              <text x="24" y="34" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444" letter-spacing="1.5">
+                INNER MEMBRANE: LATERAL ABRASION DETECTED // 4-DIGIT FURROW PATTERN
+              </text>
+              <text x="24" y="298" font-family="JetBrains Mono, monospace" font-size="10" fill="#fca5a5" opacity="0.8">
+                NOTE: RINSE INTERIOR WITH COLD WATER BEFORE RE-ISSUING
+              </text>
+            </svg>
+          </div>
+
+          <!-- Optical Loupe Ring -->
+          <div class="loupe-ring" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         STAGE 3: THE COLLECTION / PRODUCT CARDS (40% - 65% SCROLL)
+         Dark & Predatory
+         ======================================================================== -->
+    <section id="collection" class="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-dyn">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-4">
+        <div>
+          <p class="text-xs font-mono uppercase tracking-[0.2em] text-red-500/90 mb-3">02 // Field Allocation</p>
+          <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight text-dyn-primary">
+            The Containment Collection
+          </h2>
+        </div>
+        <p class="text-sm text-dyn-secondary max-w-md">
+          All garments ship pre-treated with odor-neutralizing fluoropolymers. Exterior hardware is machined from non-reflective anodized steel.
+        </p>
+      </div>
+
+      <!-- 3 Product Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Product 1: The Commuter Shroud -->
+        <article class="surface-card border rounded-2xl overflow-hidden flex flex-col justify-between group">
+          <div>
+            <!-- Technical Garment Silhouette Header -->
+            <div class="h-64 bg-black/40 border-b border-dyn relative flex items-center justify-center p-6 overflow-hidden">
+              <span class="absolute top-3 left-3 text-[10px] font-mono text-dyn-muted tracking-widest">SKU // DR-01-SHROUD</span>
+              <span class="absolute top-3 right-3 text-[10px] font-mono text-red-400/90 tracking-widest">EXT-LOCK™</span>
+
+              <!-- Minimalist SVG Silhouette: The Commuter Shroud -->
+              <svg viewBox="0 0 220 240" class="h-48 w-auto transition-transform duration-500 group-hover:scale-105" aria-label="The Commuter Shroud technical silhouette">
+                <!-- Faceless Tall Hood -->
+                <path d="M88 22 C88 8, 132 8, 132 22 L138 48 L82 48 Z" fill="#18181b" stroke="#e4e4e7" stroke-width="1.5" />
+                <ellipse cx="110" cy="31" rx="14" ry="15" fill="#09090b" stroke="#52525b" stroke-width="1" />
+                <!-- Full-Calf Narrow Coat -->
+                <path d="M82 48 L138 48 L154 125 L162 222 L58 222 L66 125 Z" fill="#121215" stroke="#e4e4e7" stroke-width="1.5" />
+                <!-- Pinched Arms / Internal Restraint Profile -->
+                <path d="M82 48 L62 118 L70 122 L86 68" fill="none" stroke="#a1a1aa" stroke-width="1.3" />
+                <path d="M138 48 L158 118 L150 122 L134 68" fill="none" stroke="#a1a1aa" stroke-width="1.3" />
+                <!-- Reverse-Track Exterior Zipper & Padlock Ring -->
+                <line x1="110" y1="48" x2="110" y2="222" stroke="#dc2626" stroke-width="2" stroke-dasharray="3 2" />
+                <circle cx="110" cy="54" r="4.5" fill="none" stroke="#ef4444" stroke-width="1.6" />
+                <rect x="106" y="57" width="8" height="7" rx="1" fill="#ef4444" />
+              </svg>
+            </div>
+
+            <!-- Product Copy -->
+            <div class="p-6 sm:p-7">
+              <div class="flex items-baseline justify-between gap-2 mb-3">
+                <h3 class="text-xl font-semibold text-dyn-primary">The Commuter Shroud</h3>
+                <span class="font-mono text-base font-medium text-dyn-primary">$240</span>
+              </div>
+              <p class="text-sm text-dyn-secondary leading-relaxed">
+                Full-calf coverage. Features our signature reverse-track zipper—completely smooth on the inside, lockable from the exterior.
+              </p>
+            </div>
+          </div>
+
+          <div class="px-6 sm:px-7 pb-6 sm:pb-7">
+            <button
+              type="button"
+              data-product-id="commuter-shroud"
+              data-product-name="The Commuter Shroud"
+              data-product-price="240"
+              class="add-to-bag-btn w-full py-3.5 px-4 rounded-xl border border-dyn surface-elevated text-xs font-mono uppercase tracking-[0.16em] text-dyn-primary hover:border-red-700 hover:text-red-400 transition-all cursor-pointer"
+            >
+              Add to Bag
+            </button>
+          </div>
+        </article>
+
+        <!-- Product 2: The Deep-Woods Poncho -->
+        <article class="surface-card border rounded-2xl overflow-hidden flex flex-col justify-between group">
+          <div>
+            <div class="h-64 bg-black/40 border-b border-dyn relative flex items-center justify-center p-6 overflow-hidden">
+              <span class="absolute top-3 left-3 text-[10px] font-mono text-dyn-muted tracking-widest">SKU // DR-02-PONCHO</span>
+              <span class="absolute top-3 right-3 text-[10px] font-mono text-red-400/90 tracking-widest">ZERO-SHED</span>
+
+              <!-- Minimalist SVG Silhouette: The Deep-Woods Poncho -->
+              <svg viewBox="0 0 220 240" class="h-48 w-auto transition-transform duration-500 group-hover:scale-105" aria-label="The Deep-Woods Poncho technical silhouette">
+                <!-- Peaked Hood -->
+                <path d="M94 24 L110 8 L126 24 L128 46 L92 46 Z" fill="#18181b" stroke="#e4e4e7" stroke-width="1.5" />
+                <!-- Wide Tarp-Like Draped Triangle Poncho -->
+                <path d="M92 46 L128 46 L196 172 L110 216 L24 172 Z" fill="#111311" stroke="#e4e4e7" stroke-width="1.5" stroke-linejoin="round" />
+                <!-- Grommet Tie-Down Corners -->
+                <circle cx="34" cy="170" r="3" fill="none" stroke="#ef4444" stroke-width="1.5" />
+                <circle cx="186" cy="170" r="3" fill="none" stroke="#ef4444" stroke-width="1.5" />
+                <circle cx="110" cy="206" r="3" fill="none" stroke="#ef4444" stroke-width="1.5" />
+                <!-- Internal Fold Lines -->
+                <line x1="96" y1="54" x2="72" y2="188" stroke="#3f3f46" stroke-width="1" />
+                <line x1="124" y1="54" x2="148" y2="188" stroke="#3f3f46" stroke-width="1" />
+              </svg>
+            </div>
+
+            <div class="p-6 sm:p-7">
+              <div class="flex items-baseline justify-between gap-2 mb-3">
+                <h3 class="text-xl font-semibold text-dyn-primary">The Deep-Woods Poncho</h3>
+                <span class="font-mono text-base font-medium text-dyn-primary">$195</span>
+              </div>
+              <p class="text-sm text-dyn-secondary leading-relaxed">
+                Matte forest-floor finish. Wipes completely clean with a single damp cloth. Leaves zero fibers behind.
+              </p>
+            </div>
+          </div>
+
+          <div class="px-6 sm:px-7 pb-6 sm:pb-7">
+            <button
+              type="button"
+              data-product-id="deep-woods-poncho"
+              data-product-name="The Deep-Woods Poncho"
+              data-product-price="195"
+              class="add-to-bag-btn w-full py-3.5 px-4 rounded-xl border border-dyn surface-elevated text-xs font-mono uppercase tracking-[0.16em] text-dyn-primary hover:border-red-700 hover:text-red-400 transition-all cursor-pointer"
+            >
+              Add to Bag
+            </button>
+          </div>
+        </article>
+
+        <!-- Product 3: The Cellar Apron-Coat -->
+        <article class="surface-card border rounded-2xl overflow-hidden flex flex-col justify-between group">
+          <div>
+            <div class="h-64 bg-black/40 border-b border-dyn relative flex items-center justify-center p-6 overflow-hidden">
+              <span class="absolute top-3 left-3 text-[10px] font-mono text-dyn-muted tracking-widest">SKU // DR-03-CELLAR</span>
+              <span class="absolute top-3 right-3 text-[10px] font-mono text-red-400/90 tracking-widest">HEAVY VINYL</span>
+
+              <!-- Minimalist SVG Silhouette: The Cellar Apron-Coat -->
+              <svg viewBox="0 0 220 240" class="h-48 w-auto transition-transform duration-500 group-hover:scale-105" aria-label="The Cellar Apron-Coat technical silhouette">
+                <!-- High Collar -->
+                <rect x="92" y="24" width="36" height="18" rx="2" fill="#18181b" stroke="#e4e4e7" stroke-width="1.5" />
+                <!-- Broad Industrial Sleeves -->
+                <path d="M74 42 L44 64 L36 160 L56 162 L68 88" fill="#121215" stroke="#e4e4e7" stroke-width="1.5" />
+                <path d="M146 42 L176 64 L184 160 L164 162 L152 88" fill="#121215" stroke="#e4e4e7" stroke-width="1.5" />
+                <!-- Heavy Rigid Coat Body -->
+                <rect x="68" y="42" width="84" height="178" rx="3" fill="#0d0d10" stroke="#e4e4e7" stroke-width="1.5" />
+                <!-- Reinforced Butcher/Splash Apron Bib Overlay -->
+                <path d="M78 52 L142 52 L146 206 L74 206 Z" fill="#18181b" stroke="#dc2626" stroke-width="1.3" />
+                <!-- Heavy Neck & Waist Harness Straps -->
+                <line x1="78" y1="52" x2="94" y2="32" stroke="#ef4444" stroke-width="1.5" />
+                <line x1="142" y1="52" x2="126" y2="32" stroke="#ef4444" stroke-width="1.5" />
+                <line x1="68" y1="126" x2="152" y2="126" stroke="#71717a" stroke-width="2" />
+              </svg>
+            </div>
+
+            <div class="p-6 sm:p-7">
+              <div class="flex items-baseline justify-between gap-2 mb-3">
+                <h3 class="text-xl font-semibold text-dyn-primary">The Cellar Apron-Coat</h3>
+                <span class="font-mono text-base font-medium text-dyn-primary">$310</span>
+              </div>
+              <p class="text-sm text-dyn-secondary leading-relaxed">
+                Heavy-duty industrial vinyl. Designed for high-splash environments and prolonged basement use.
+              </p>
+            </div>
+          </div>
+
+          <div class="px-6 sm:px-7 pb-6 sm:pb-7">
+            <button
+              type="button"
+              data-product-id="cellar-apron-coat"
+              data-product-name="The Cellar Apron-Coat"
+              data-product-price="310"
+              class="add-to-bag-btn w-full py-3.5 px-4 rounded-xl border border-dyn surface-elevated text-xs font-mono uppercase tracking-[0.16em] text-dyn-primary hover:border-red-700 hover:text-red-400 transition-all cursor-pointer"
+            >
+              Add to Bag
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         STAGE 4: CLINICAL SIZING & CARE GUIDE (65% - 75% SCROLL)
+         Cold & Clinical — Reads like an abduction & cleanup checklist
+         ======================================================================== -->
+    <section id="sizing" class="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-dyn">
+      <div class="mb-10">
+        <p class="text-xs font-mono uppercase tracking-[0.2em] text-red-500 mb-3">03 // Anthropometric & Sanitation Protocol</p>
+        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-dyn-primary font-mono">
+          CONTAINMENT SIZING &amp; CARE MATRIX
+        </h2>
+        <p class="text-xs sm:text-sm font-mono text-dyn-secondary mt-2">
+          Verify subject dimensions prior to deployment. Improper fit may permit leverage or acoustic leakage.
+        </p>
+      </div>
+
+      <div class="surface-card border rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse font-mono text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b border-dyn bg-black/50 text-dyn-muted uppercase text-[11px] tracking-wider">
+                <th class="py-4 px-5">Parameter</th>
+                <th class="py-4 px-5">Clinical Specification</th>
+                <th class="py-4 px-5 hidden sm:table-cell">Tolerance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-dyn text-dyn-primary">
+              <tr class="hover:bg-red-950/10 transition-colors">
+                <td class="py-4 px-5 font-semibold text-red-400 whitespace-nowrap">SUBJECT HEIGHT</td>
+                <td class="py-4 px-5">Accommodates heights 5'3" to 5'10" (Standard Trunk / Cargo Compartment Clearance)</td>
+                <td class="py-4 px-5 text-dyn-muted hidden sm:table-cell">± 1.5 IN</td>
+              </tr>
+              <tr class="hover:bg-red-950/10 transition-colors">
+                <td class="py-4 px-5 font-semibold text-red-400 whitespace-nowrap">WRIST / CUFF ALLOWANCE</td>
+                <td class="py-4 px-5">Extended cuff allowance for bound wrists; reinforced nylon cinch-channel at 18cm</td>
+                <td class="py-4 px-5 text-dyn-muted hidden sm:table-cell">0.0 SLIP</td>
+              </tr>
+              <tr class="hover:bg-red-950/10 transition-colors">
+                <td class="py-4 px-5 font-semibold text-red-400 whitespace-nowrap">COLLAR &amp; HOOD SEAL</td>
+                <td class="py-4 px-5">360° opaque blackout drawcord; eliminates peripheral vision and muffled vocal projection</td>
+                <td class="py-4 px-5 text-dyn-muted hidden sm:table-cell">-38 dB</td>
+              </tr>
+              <tr class="hover:bg-red-950/10 transition-colors">
+                <td class="py-4 px-5 font-semibold text-red-400 whitespace-nowrap">INTERIOR CARE</td>
+                <td class="py-4 px-5">Hose-washable interior lining (cold water only — hot water sets organic proteins)</td>
+                <td class="py-4 px-5 text-dyn-muted hidden sm:table-cell">MAX 15°C</td>
+              </tr>
+              <tr class="hover:bg-red-950/10 transition-colors">
+                <td class="py-4 px-5 font-semibold text-red-400 whitespace-nowrap">SURFACE RETENTION</td>
+                <td class="py-4 px-5">Zero-fiber polymer sheds no trace evidence across concrete, gravel, or trunk carpet</td>
+                <td class="py-4 px-5 text-dyn-muted hidden sm:table-cell">0.00% TRACE</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         STAGE 5: "VERIFIED WEARER REVIEWS" (75% - 100% SCROLL)
+         Outright Terrifying Psychological Horror Climax
+         ======================================================================== -->
+    <section id="reviews" class="py-20 sm:py-32 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-dyn relative">
+      <!-- Reviews Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-10 border-b border-dyn">
+        <div>
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-red-950/50 border border-red-900/60 text-[11px] font-mono text-red-400 uppercase tracking-widest mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+            Live Telemetry Feed
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight text-dyn-primary">
+            Verified Wearer Reviews
+          </h2>
+          <p class="text-sm text-dyn-secondary mt-1.5 font-serif italic text-lg">
+            Unfiltered feedback from individuals currently inside our shells.
+          </p>
+        </div>
+
+        <!-- Overall 4.9 ★ Rating Block -->
+        <div class="surface-card border rounded-2xl px-6 py-4 text-left sm:text-right shrink-0">
+          <div class="flex items-center sm:justify-end gap-2">
+            <span class="text-3xl font-bold font-mono text-dyn-primary">4.9</span>
+            <span class="text-red-500 text-2xl">★</span>
+          </div>
+          <p class="text-xs font-mono text-dyn-muted mt-1">1,408 VERIFIED WEARERS</p>
+          <p class="text-[11px] font-mono text-red-400/80 mt-0.5">100% WOULD RECOMMEND</p>
+        </div>
+      </div>
+
+      <!-- 5 Escalating Horror Review Cards -->
+      <div id="reviewsListContainer" class="mt-10 space-y-6">
+
+        <!-- REVIEW 1 (5 ★ - Creepy) -->
+        <article class="surface-card border rounded-2xl p-6 sm:p-7 transition-all">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xs font-mono font-semibold text-zinc-300">
+                SM
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-dyn-primary">Sarah M.</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-900 text-zinc-300 border border-zinc-700">
+                    Verified Gift
+                  </span>
+                </div>
+                <p class="text-xs font-mono text-dyn-muted">The Commuter Shroud (Signal Yellow)</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-amber-400 text-sm tracking-widest">★★★★★</div>
+              <span class="text-[11px] font-mono text-dyn-muted">3 weeks ago</span>
+            </div>
+          </div>
+          <p class="text-sm sm:text-base text-dyn-secondary leading-relaxed">
+            "Keeps you completely dry even during a sudden downpour on my evening walk. Zero wind gets through the collar. The only strange thing is I don't actually remember buying it—I just woke up Tuesday morning and found it hanging neatly inside my locked apartment hallway."
+          </p>
+        </article>
+
+        <!-- REVIEW 2 (4 ★ - Disturbing) -->
+        <article class="surface-card border rounded-2xl p-6 sm:p-7 transition-all">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xs font-mono font-semibold text-zinc-300">
+                ER
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-dyn-primary">Elena R.</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-950/50 text-red-300 border border-red-900/50">
+                    Verified Wearer
+                  </span>
+                </div>
+                <p class="text-xs font-mono text-dyn-muted">The Deep-Woods Poncho</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-red-500 text-sm tracking-widest">★★★★<span class="text-zinc-700">★</span></div>
+              <span class="text-[11px] font-mono text-dyn-muted">6 days ago</span>
+            </div>
+          </div>
+          <p class="text-sm sm:text-base text-dyn-secondary leading-relaxed">
+            "The acoustic dampening is no joke. When the hood is cinched tight over my face, I can barely hear my own screaming over the rain hitting the vinyl. Deducted one star because it's hard to breathe through the lining. If anyone is reading this we are in a dark blue van heading north on Route 9 please"
+          </p>
+        </article>
+
+        <!-- REVIEW 3 (5 ★ - Coerced) -->
+        <article class="surface-card border rounded-2xl p-6 sm:p-7 transition-all">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xs font-mono font-semibold text-zinc-300">
+                MT
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-dyn-primary">Marcus T.</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-950/50 text-red-300 border border-red-900/50">
+                    Verified Wearer
+                  </span>
+                </div>
+                <p class="text-xs font-mono text-dyn-muted">The Cellar Apron-Coat</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-red-500 text-sm tracking-widest">★★★★★</div>
+              <span class="text-[11px] font-mono text-dyn-muted">2 days ago</span>
+            </div>
+          </div>
+          <p class="text-sm sm:text-base text-dyn-primary leading-relaxed font-normal">
+            "He told me if I rated it five stars he would loosen the zip-ties on my ankles. The non-porous lining really works. Not a drop got on the concrete. Five stars. Five stars. Please."
+          </p>
+        </article>
+
+        <!-- REVIEW 4 (Starts at 1 ★, glitches/forces itself to 5 ★ when scrolled into view) -->
+        <article id="review4Card" class="surface-card border border-red-900/50 rounded-2xl p-6 sm:p-7 transition-all relative overflow-hidden">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-red-950 border border-red-800 flex items-center justify-center text-xs font-mono font-semibold text-red-200">
+                CV
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-dyn-primary">Chloe V.</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-950 text-red-300 border border-red-800">
+                    Verified Wearer
+                  </span>
+                </div>
+                <p class="text-xs font-mono text-dyn-muted">The Commuter Shroud</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="review4Stars" class="text-zinc-500 text-sm tracking-widest font-mono">★☆☆☆☆</div>
+              <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                <span id="review4ModBadge" class="hidden text-[9px] font-mono uppercase px-1.5 py-0.2 bg-red-950 text-red-400 border border-red-800 rounded">
+                  RATING CORRECTED
+                </span>
+                <span class="text-[11px] font-mono text-red-400">11 minutes ago</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-sm sm:text-base font-mono text-red-100 leading-relaxed tracking-tight uppercase">
+            "IT WON'T UNZIP FROM THE INSIDE THERE IS NO PULL TAB ON THE INSIDE HE IS COMING DOWN THE STAIRS WITH THE HOSE"
+          </p>
+
+          <!-- Cheerful Corporate Reply from DRIFT® Customer Care -->
+          <div class="mt-5 ml-3 sm:ml-6 p-4 rounded-xl bg-zinc-950/90 border-l-2 border-red-600">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-xs bg-amber-400"></span>
+                <span class="text-xs font-semibold tracking-wider uppercase text-white">DRIFT® Customer Care</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">OFFICIAL RESPONSE</span>
+              </div>
+              <span class="text-[10px] font-mono text-zinc-500">10 minutes ago</span>
+            </div>
+            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+              Hi Chloe! We're thrilled you're experiencing the total isolation of our Storm-Seal™ system! Remember: nobody can hear the storm when you're inside. Stay dry! ☔
+            </p>
+          </div>
+        </article>
+
+        <!-- REVIEW 5 (5 ★ - Visceral Finale) -->
+        <article id="review5Card" class="surface-card border border-red-900/70 rounded-2xl p-6 sm:p-7 transition-all relative">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-red-950 border border-red-700 flex items-center justify-center text-xs font-mono font-semibold text-red-200">
+                DK
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-dyn-primary">David K.</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-950 text-red-300 border border-red-800">
+                    Active Session
+                  </span>
+                </div>
+                <p class="text-xs font-mono text-dyn-muted">The Cellar Apron-Coat</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-red-500 text-sm tracking-widest">★★★★★</div>
+              <span class="text-[11px] font-mono text-red-500 animate-pulse">Just now</span>
+            </div>
+          </div>
+
+          <p class="text-sm sm:text-base font-mono text-zinc-200 leading-relaxed">
+            "i can see the porch light through the gap in the floorboards. my phone is at 2%. the zipper just clicked from the outside. he's wearing the yellow one. he's just standing there watching me type th—"
+          </p>
+
+          <div class="mt-4 pt-3 border-t border-red-950/60 flex items-center justify-between text-[11px] font-mono text-red-500/90">
+            <span>● CONNECTION LOST (14s AGO)</span>
+            <span>ZIP-TRACK: ENGAGED</span>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- ======================================================================
+           INTERACTIVE HIJACKED "WRITE A REVIEW" WIDGET AT THE BOTTOM
+           ====================================================================== -->
+      <div class="mt-14 surface-card border border-red-900/60 rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+        <div class="mb-6">
+          <p class="text-xs font-mono uppercase tracking-[0.18em] text-red-500 mb-1.5">Wearer Feedback Terminal</p>
+          <h3 class="text-xl sm:text-2xl font-semibold text-dyn-primary">Share Your Experience with DRIFT®</h3>
+          <p class="text-xs sm:text-sm text-dyn-secondary mt-1">
+            Your feedback helps assure others that everything is completely under control.
+          </p>
+        </div>
+
+        <form id="hijackedReviewForm" class="space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="reviewerNameInput" class="block text-xs font-mono uppercase tracking-wider text-dyn-muted mb-2">
+                Your Name
+              </label>
+              <input
+                id="reviewerNameInput"
+                type="text"
+                placeholder="Guest #1409"
+                class="w-full px-4 py-3 rounded-xl bg-black/70 border border-dyn text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-600 font-mono"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-mono uppercase tracking-wider text-dyn-muted mb-2">
+                Satisfaction Rating
+              </label>
+              <div id="interactiveStars" class="flex items-center gap-2 py-2" role="group" aria-label="Star rating">
+                <button type="button" data-star="1" class="review-star-btn text-2xl text-red-500 transition-transform hover:scale-110 cursor-pointer">★</button>
+                <button type="button" data-star="2" class="review-star-btn text-2xl text-red-500 transition-transform hover:scale-110 cursor-pointer">★</button>
+                <button type="button" data-star="3" class="review-star-btn text-2xl text-red-500 transition-transform hover:scale-110 cursor-pointer">★</button>
+                <button type="button" data-star="4" class="review-star-btn text-2xl text-red-500 transition-transform hover:scale-110 cursor-pointer">★</button>
+                <button type="button" data-star="5" class="review-star-btn text-2xl text-red-500 transition-transform hover:scale-110 cursor-pointer">★</button>
+                <span id="starLockNote" class="text-[11px] font-mono text-zinc-500 ml-2">5.0 / 5.0</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label for="hijackedTextarea" class="block text-xs font-mono uppercase tracking-wider text-dyn-muted">
+                Your Review
+              </label>
+              <span id="typingTelemetry" class="text-[11px] font-mono text-red-400/80">INPUT MONITORED</span>
+            </div>
+            <textarea
+              id="hijackedTextarea"
+              rows="3"
+              placeholder="Start typing your review here..."
+              class="w-full px-4 py-3.5 rounded-xl bg-black/80 border border-dyn text-sm sm:text-base text-white placeholder-zinc-600 focus:outline-none focus:border-red-600 font-mono leading-relaxed resize-none"
+            ></textarea>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <p class="text-[11px] font-mono text-dyn-muted">
+              By submitting, you consent to continuous acoustic &amp; GPS containment verification.
+            </p>
+            <button
+              type="submit"
+              class="px-6 py-3.5 rounded-xl bg-red-700 hover:bg-red-600 text-white text-xs font-mono uppercase tracking-[0.18em] font-semibold transition-all shadow-lg shadow-red-950/50 cursor-pointer shrink-0"
+            >
+              Submit Review
+            </button>
+          </div>
+        </form>
+
+        <!-- Cold Confirmation Banner (Shown on Submit) -->
+        <div
+          id="locationConfirmedBanner"
+          class="hidden mt-6 p-4 sm:p-5 rounded-xl bg-red-950/75 border border-red-600 text-red-100 flex items-center justify-between gap-4"
+        >
+          <div class="flex items-center gap-3">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shrink-0"></span>
+            <div>
+              <p class="text-sm font-mono font-semibold tracking-wide">
+                Thank you. Your location has been confirmed.
+              </p>
+              <p class="text-xs font-mono text-red-300/80 mt-0.5">
+                Dispatch unit en route. Remain inside and keep the hood zipped.
+              </p>
+            </div>
+          </div>
+          <span class="text-[11px] font-mono text-red-300 border border-red-700/70 px-2.5 py-1 rounded hidden sm:inline-block">
+            LOCKED
+          </span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       MINIMALIST FOOTER
+       ======================================================================== -->
+  <footer class="border-t border-dyn py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-xs font-mono text-dyn-muted">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-xs bg-red-600"></span>
+        <span>DRIFT® CONTAINMENT OUTERWEAR — OSLO / ROUTE 9</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <span>ALL SALES FINAL</span>
+        <span>NO TRACES LEFT BEHIND</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+       FLOATING WEB AUDIO API AMBIENT SOUND TOGGLE
+       Synthesizes soft rainfall at top -> sub-bass dread drone & clanks below
+       ======================================================================== -->
+  <button
+    id="audioToggleBtn"
+    type="button"
+    class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-full bg-zinc-950/90 text-zinc-200 border border-zinc-700/80 hover:border-red-600 backdrop-blur-md shadow-2xl flex items-center gap-2.5 text-xs font-mono tracking-wider transition-all cursor-pointer"
+    aria-label="Toggle ambient audio"
+  >
+    <span id="audioIndicatorDot" class="w-2 h-2 rounded-full bg-zinc-500 transition-colors"></span>
+    <span id="audioToggleLabel">Ambient Rain: OFF</span>
+  </button>
+
+  <!-- ========================================================================
+       JAVASCRIPT: SCROLL CHOREOGRAPHY, INTERACTIVE HORROR & WEB AUDIO ENGINE
+       ======================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ----------------------------------------------------------------------
+         1. COLOR INTERPOLATION & CONTINUOUS SCROLL-LINKED ATMOSPHERE
+         ---------------------------------------------------------------------- */
+      const root = document.documentElement;
+      const announcementText = document.getElementById('announcementText');
+      const announcementDot = document.getElementById('announcementDot');
+      const brandSquare = document.getElementById('brandSquare');
+      const brandLogoText = document.getElementById('brandLogoText');
+      const cursorSpotlight = document.getElementById('cursorSpotlight');
+      const crimsonVignette = document.getElementById('crimsonVignette');
+
+      // Multi-stop color keyframes mapped to scroll progress (0.0 -> 1.0)
+      const themeStops = [
+        {
+          p: 0.0,
+          bgPrimary: [248, 249, 250],
+          bgCard: [255, 255, 255],
+          bgElevated: [241, 245, 249],
+          textPrimary: [15, 23, 42],
+          textSecondary: [71, 85, 105],
+          textMuted: [100, 116, 139],
+          borderSubtle: [226, 232, 240],
+          navBg: [248, 249, 250, 0.85],
+        },
+        {
+          p: 0.22,
+          bgPrimary: [226, 232, 240],
+          bgCard: [241, 245, 249],
+          bgElevated: [203, 213, 225],
+          textPrimary: [15, 23, 42],
+          textSecondary: [51, 65, 85],
+          textMuted: [71, 85, 105],
+          borderSubtle: [148, 163, 184],
+          navBg: [226, 232, 240, 0.88],
+        },
+        {
+          p: 0.42,
+          bgPrimary: [39, 44, 54],
+          bgCard: [51, 58, 70],
+          bgElevated: [30, 34, 42],
+          textPrimary: [241, 245, 249],
+          textSecondary: [203, 213, 225],
+          textMuted: [148, 163, 184],
+          borderSubtle: [71, 85, 105],
+          navBg: [30, 34, 42, 0.90],
+        },
+        {
+          p: 0.65,
+          bgPrimary: [13, 14, 18],
+          bgCard: [20, 21, 27],
+          bgElevated: [28, 29, 36],
+          textPrimary: [244, 244, 245],
+          textSecondary: [161, 161, 170],
+          textMuted: [113, 113, 122],
+          borderSubtle: [45, 45, 54],
+          navBg: [13, 14, 18, 0.92],
+        },
+        {
+          p: 1.0,
+          bgPrimary: [5, 5, 7],
+          bgCard: [11, 11, 14],
+          bgElevated: [18, 14, 16],
+          textPrimary: [248, 250, 252],
+          textSecondary: [161, 161, 170],
+          textMuted: [113, 113, 122],
+          borderSubtle: [69, 18, 18],
+          navBg: [5, 5, 7, 0.94],
+        },
+      ];
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function lerpColor(c1, c2, t) {
+        const r = Math.round(lerp(c1[0], c2[0], t));
+        const g = Math.round(lerp(c1[1], c2[1], t));
+        const b = Math.round(lerp(c1[2], c2[2], t));
+        if (c1.length === 4) {
+          const a = lerp(c1[3], c2[3], t).toFixed(2);
+          return `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      let currentAnnouncementStage = -1;
+      let currentScrollProgress = 0;
+
+      function updateAnnouncementBar(progress) {
+        let stage = 0;
+        if (progress >= 0.86) stage = 4;
+        else if (progress >= 0.66) stage = 3;
+        else if (progress >= 0.44) stage = 2;
+        else if (progress >= 0.22) stage = 1;
+        else stage = 0;
+
+        if (stage === currentAnnouncementStage) return;
+        currentAnnouncementStage = stage;
+
+        const messages = [
+          {
+            text: 'Complimentary express shipping on orders over $150',
+            dotClass: 'w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block',
+            mono: false,
+            danger: false,
+          },
+          {
+            text: 'Weather Advisory: Heavy rain and zero visibility expected tonight',
+            dotClass: 'w-1.5 h-1.5 rounded-full bg-amber-500 inline-block',
+            mono: false,
+            danger: false,
+          },
+          {
+            text: '14 customers in your zip code are currently wearing DRIFT®',
+            dotClass: 'w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-pulse',
+            mono: true,
+            danger: false,
+          },
+          {
+            text: '1 wearer is currently standing outside',
+            dotClass: 'w-2 h-2 rounded-full bg-red-600 inline-block animate-ping',
+            mono: true,
+            danger: true,
+          },
+          {
+            text: 'Your front door is unlocked.',
+            dotClass: 'w-2 h-2 rounded-full bg-red-500 inline-block animate-ping',
+            mono: true,
+            danger: true,
+          },
+        ];
+
+        const cfg = messages[stage];
+        announcementText.style.opacity = '0';
+        setTimeout(() => {
+          announcementText.textContent = cfg.text;
+          announcementDot.className = cfg.dotClass;
+          announcementText.classList.toggle('font-mono', cfg.mono);
+          announcementText.classList.toggle('text-red-400', cfg.danger);
+          announcementText.classList.toggle('font-semibold', cfg.danger);
+          announcementText.style.opacity = '1';
+        }, 140);
+      }
+
+      function handleScrollAtmosphere() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, scrollTop / maxScroll));
+        currentScrollProgress = progress;
+
+        root.style.setProperty('--scroll-progress', progress.toFixed(4));
+
+        // Find active theme stop interval
+        let s1 = themeStops[0];
+        let s2 = themeStops[themeStops.length - 1];
+        for (let i = 0; i < themeStops.length - 1; i++) {
+          if (progress >= themeStops[i].p && progress <= themeStops[i + 1].p) {
+            s1 = themeStops[i];
+            s2 = themeStops[i + 1];
+            break;
+          }
+        }
+
+        const span = Math.max(0.0001, s2.p - s1.p);
+        const localT = Math.min(1, Math.max(0, (progress - s1.p) / span));
+
+        root.style.setProperty('--bg-primary', lerpColor(s1.bgPrimary, s2.bgPrimary, localT));
+        root.style.setProperty('--bg-card', lerpColor(s1.bgCard, s2.bgCard, localT));
+        root.style.setProperty('--bg-elevated', lerpColor(s1.bgElevated, s2.bgElevated, localT));
+        root.style.setProperty('--text-primary', lerpColor(s1.textPrimary, s2.textPrimary, localT));
+        root.style.setProperty('--text-secondary', lerpColor(s1.textSecondary, s2.textSecondary, localT));
+        root.style.setProperty('--text-muted', lerpColor(s1.textMuted, s2.textMuted, localT));
+        root.style.setProperty('--border-subtle', lerpColor(s1.borderSubtle, s2.borderSubtle, localT));
+        root.style.setProperty('--nav-bg', lerpColor(s1.navBg, s2.navBg, localT));
+
+        // Film grain ramps up gradually after 15% scroll
+        const grainOpacity = progress < 0.15 ? 0 : Math.min(0.15, ((progress - 0.15) / 0.85) * 0.15);
+        root.style.setProperty('--grain-opacity', grainOpacity.toFixed(3));
+
+        // Dark cursor flashlight spotlight engages in lower half (> 45% scroll)
+        const spotlightOpacity = progress < 0.45 ? 0 : Math.min(0.95, ((progress - 0.45) / 0.35) * 0.95);
+        root.style.setProperty('--spotlight-opacity', spotlightOpacity.toFixed(3));
+
+        // Red vignette ramps up past 62% scroll
+        const vignetteOpacity = progress < 0.62 ? 0 : Math.min(1, ((progress - 0.62) / 0.35) * 1);
+        root.style.setProperty('--vignette-opacity', vignetteOpacity.toFixed(3));
+
+        // Heartbeat pulse activates at the climax (> 86% scroll)
+        if (progress > 0.86) {
+          crimsonVignette.classList.add('heartbeat-active');
+        } else {
+          crimsonVignette.classList.remove('heartbeat-active');
+        }
+
+        // Brand square shifts from Safety Yellow to Blood Crimson
+        if (progress > 0.55) {
+          brandSquare.classList.remove('bg-amber-400');
+          brandSquare.classList.add('bg-red-600');
+        } else {
+          brandSquare.classList.add('bg-amber-400');
+          brandSquare.classList.remove('bg-red-600');
+        }
+
+        updateAnnouncementBar(progress);
+        updateAudioForScroll(progress);
+      }
+
+      // Periodic subtle micro-glitch on brand logo when deep in the dark sections
+      setInterval(() => {
+        if (currentScrollProgress > 0.55 && Math.random() < 0.32) {
+          brandLogoText.classList.add('glitch-active');
+          setTimeout(() => {
+            brandLogoText.classList.remove('glitch-active');
+          }, 240);
+        }
+      }, 3200);
+
+      // Cursor tracking for dark ambient spotlight
+      window.addEventListener('pointermove', (e) => {
+        root.style.setProperty('--cursor-x', `${e.clientX}px`);
+        root.style.setProperty('--cursor-y', `${e.clientY}px`);
+      }, { passive: true });
+
+      window.addEventListener('scroll', () => {
+        requestAnimationFrame(handleScrollAtmosphere);
+      }, { passive: true });
+
+      // Initialize on load
+      handleScrollAtmosphere();
+
+      /* ----------------------------------------------------------------------
+         2. STAGE 2: INTERACTIVE MICRO-WEAVE FABRIC INSPECTOR
+         ---------------------------------------------------------------------- */
+      const fabricInspector = document.getElementById('fabricInspector');
+      const toggleRevealBtn = document.getElementById('toggleRevealBtn');
+
+      function updateLoupeCoordinates(clientX, clientY) {
+        const rect = fabricInspector.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+        fabricInspector.style.setProperty('--loupe-x', `${x}px`);
+        fabricInspector.style.setProperty('--loupe-y', `${y}px`);
+      }
+
+      fabricInspector.addEventListener('mouseenter', (e) => {
+        fabricInspector.classList.add('is-inspecting');
+        updateLoupeCoordinates(e.clientX, e.clientY);
+      });
+
+      fabricInspector.addEventListener('mousemove', (e) => {
+        fabricInspector.classList.add('is-inspecting');
+        updateLoupeCoordinates(e.clientX, e.clientY);
+      });
+
+      fabricInspector.addEventListener('mouseleave', () => {
+        fabricInspector.classList.remove('is-inspecting');
+      });
+
+      // Touch support for mobile & tablets
+      fabricInspector.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          fabricInspector.classList.add('is-inspecting');
+          updateLoupeCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      fabricInspector.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+          updateLoupeCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      fabricInspector.addEventListener('touchend', () => {
+        fabricInspector.classList.remove('is-inspecting');
+      });
+
+      toggleRevealBtn.addEventListener('click', () => {
+        const isForced = fabricInspector.classList.toggle('force-reveal');
+        toggleRevealBtn.textContent = isForced ? 'Restore Outer Weave' : 'Toggle Full Scan';
+      });
+
+      /* ----------------------------------------------------------------------
+         3. STAGE 3: UNCANNY "ADD TO BAG" & SLIDE-OVER DRAWER BEHAVIOR
+         ---------------------------------------------------------------------- */
+      const bagTriggerBtn = document.getElementById('bagTriggerBtn');
+      const bagCountLabel = document.getElementById('bagCountLabel');
+      const bagDrawer = document.getElementById('bagDrawer');
+      const bagDrawerBackdrop = document.getElementById('bagDrawerBackdrop');
+      const closeBagBtn = document.getElementById('closeBagBtn');
+      const bagItemsContainer = document.getElementById('bagItemsContainer');
+      const emptyBagState = document.getElementById('emptyBagState');
+      const bagFooter = document.getElementById('bagFooter');
+      const bagTotalPrice = document.getElementById('bagTotalPrice');
+      const bagSubStatus = document.getElementById('bagSubStatus');
+
+      const bagItems = [];
+      const uncannyButtonLabels = [
+        'ALREADY IN YOUR CLOSET',
+        'NO RETURNS',
+        'SIZED TO YOUR MEASUREMENTS',
+      ];
+      let addClickCount = 0;
+
+      function openBagDrawer() {
+        bagDrawerBackdrop.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          bagDrawerBackdrop.classList.remove('opacity-0');
+          bagDrawer.classList.remove('translate-x-full');
+        });
+      }
+
+      function closeBagDrawer() {
+        bagDrawerBackdrop.classList.add('opacity-0');
+        bagDrawer.classList.add('translate-x-full');
+        setTimeout(() => {
+          bagDrawerBackdrop.classList.add('hidden');
+        }, 300);
+      }
+
+      bagTriggerBtn.addEventListener('click', openBagDrawer);
+      closeBagBtn.addEventListener('click', closeBagDrawer);
+      bagDrawerBackdrop.addEventListener('click', closeBagDrawer);
+
+      function renderBag() {
+        if (bagItems.length === 0) {
+          emptyBagState.classList.remove('hidden');
+          bagFooter.classList.add('hidden');
+          return;
+        }
+
+        emptyBagState.classList.add('hidden');
+        bagFooter.classList.remove('hidden');
+        bagSubStatus.textContent = 'ALLOCATION LOCKED • NON-TRANSFERRABLE';
+        bagSubStatus.classList.add('text-red-400');
+
+        let total = 0;
+        const itemsHtml = bagItems
+          .map((item) => {
+            total += item.price;
+            return `
+              <div class="p-4 rounded-xl border border-red-900/40 bg-black/50 flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-white">${item.name}</p>
+                  <p class="text-[11px] font-mono text-red-400 mt-0.5">STATUS: DELIVERED TO HALLWAY CLOSET</p>
+                </div>
+                <span class="font-mono text-sm text-zinc-300">$${item.price}</span>
+              </div>
+            `;
+          })
+          .join('');
+
+        bagItemsContainer.innerHTML = itemsHtml;
+        bagTotalPrice.textContent = `$${total.toFixed(2)}`;
+      }
+
+      document.querySelectorAll('.add-to-bag-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.locked === 'true') {
+            openBagDrawer();
+            return;
+          }
+
+          const name = btn.dataset.productName;
+          const price = Number(btn.dataset.productPrice);
+          bagItems.push({ name, price });
+
+          const eerieText = uncannyButtonLabels[addClickCount % uncannyButtonLabels.length];
+          addClickCount++;
+
+          btn.dataset.locked = 'true';
+          btn.textContent = eerieText;
+          btn.classList.remove('surface-elevated', 'text-dyn-primary');
+          btn.classList.add('bg-red-950/80', 'border-red-700', 'text-red-200');
+
+          // Uncanny bag counter glitch
+          bagCountLabel.textContent = addClickCount >= 2 ? `Bag (${addClickCount} • LOCKED)` : `Bag (${addClickCount})`;
+          bagTriggerBtn.classList.add('border-red-700', 'text-red-400');
+
+          renderBag();
+        });
+      });
+
+      /* ----------------------------------------------------------------------
+         4. STAGE 5: REVIEW #4 SCROLL-TRIGGERED RATING HIJACK (1 ★ -> 5 ★)
+         ---------------------------------------------------------------------- */
+      const review4Card = document.getElementById('review4Card');
+      const review4Stars = document.getElementById('review4Stars');
+      const review4ModBadge = document.getElementById('review4ModBadge');
+      let review4Hijacked = false;
+
+      const review4Observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !review4Hijacked) {
+              review4Hijacked = true;
+              setTimeout(() => {
+                review4Stars.textContent = '★★★★★';
+                review4Stars.classList.remove('text-zinc-500');
+                review4Stars.classList.add('text-red-500', 'star-hijack-anim');
+                review4ModBadge.classList.remove('hidden');
+                triggerMetallicClank();
+              }, 750);
+            }
+          });
+        },
+        { threshold: 0.65 }
+      );
+
+      if (review4Card) {
+        review4Observer.observe(review4Card);
+      }
+
+      /* ----------------------------------------------------------------------
+         5. STAGE 5: HIJACKED "WRITE A REVIEW" WIDGET
+         Hijacks all keystrokes & mobile input into coerced safety message
+         ---------------------------------------------------------------------- */
+      const hijackedTextarea = document.getElementById('hijackedTextarea');
+      const hijackedReviewForm = document.getElementById('hijackedReviewForm');
+      const reviewerNameInput = document.getElementById('reviewerNameInput');
+      const locationConfirmedBanner = document.getElementById('locationConfirmedBanner');
+      const reviewsListContainer = document.getElementById('reviewsListContainer');
+      const typingTelemetry = document.getElementById('typingTelemetry');
+      const starLockNote = document.getElementById('starLockNote');
+
+      const COERCED_MESSAGE =
+        'I love my new DRIFT raincoat. I am completely safe and warm. Nobody needs to come looking for me.';
+      let coercedIndex = 0;
+
+      // Force any star click back to 5 stars
+      document.querySelectorAll('.review-star-btn').forEach((starBtn) => {
+        starBtn.addEventListener('click', () => {
+          starLockNote.textContent = '5.0 / 5.0 (REQUIRED)';
+          starLockNote.classList.remove('text-zinc-500');
+          starLockNote.classList.add('text-red-400');
+        });
+      });
+
+      function advanceCoercedText() {
+        if (coercedIndex < COERCED_MESSAGE.length) {
+          coercedIndex++;
+          hijackedTextarea.value = COERCED_MESSAGE.slice(0, coercedIndex);
+          typingTelemetry.textContent = 'KEYSTROKES OVERRIDDEN';
+          typingTelemetry.classList.add('text-red-500');
+        } else {
+          hijackedTextarea.value = COERCED_MESSAGE;
+          typingTelemetry.textContent = 'MESSAGE COMPLETE • READY TO SUBMIT';
+        }
+      }
+
+      // Intercept physical keyboard presses
+      hijackedTextarea.addEventListener('keydown', (e) => {
+        // Allow Tab navigation for accessibility
+        if (e.key === 'Tab') return;
+        e.preventDefault();
+        advanceCoercedText();
+      });
+
+      // Fallback interception for mobile virtual keyboards (touch typing / autocomplete)
+      hijackedTextarea.addEventListener('input', () => {
+        if (hijackedTextarea.value !== COERCED_MESSAGE.slice(0, coercedIndex)) {
+          advanceCoercedText();
+        }
+      });
+
+      hijackedReviewForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        // Ensure full coerced message is populated if submitted early
+        const finalMessage =
+          coercedIndex > 0 ? hijackedTextarea.value : COERCED_MESSAGE;
+        hijackedTextarea.value = finalMessage;
+        coercedIndex = COERCED_MESSAGE.length;
+
+        const rawName = reviewerNameInput.value.trim();
+        const displayName = rawName.length > 0 ? rawName : 'Guest #1409';
+        const initials = displayName
+          .split(' ')
+          .map((part) => part[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2) || 'G9';
+
+        // Append submitted coerced review to the live review list
+        const newReviewEl = document.createElement('article');
+        newReviewEl.className =
+          'surface-card border border-red-700/80 rounded-2xl p-6 sm:p-7 transition-all bg-red-950/15';
+        newReviewEl.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-red-950 border border-red-700 flex items-center justify-center text-xs font-mono font-semibold text-red-200">
+                ${initials}
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-white">${escapeHtml(displayName)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-red-950 text-red-300 border border-red-800">
+                    Location Confirmed
+                  </span>
+                </div>
+                <p class="text-xs font-mono text-zinc-400">The Commuter Shroud</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-red-500 text-sm tracking-widest">★★★★★</div>
+              <span class="text-[11px] font-mono text-red-400">Just now</span>
+            </div>
+          </div>
+          <p class="text-sm sm:text-base text-zinc-100 leading-relaxed">
+            "${escapeHtml(finalMessage)}"
+          </p>
+        `;
+
+        reviewsListContainer.appendChild(newReviewEl);
+        locationConfirmedBanner.classList.remove('hidden');
+        triggerMetallicClank();
+      });
+
+      function escapeHtml(str) {
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      /* ----------------------------------------------------------------------
+         6. PROCEDURAL WEB AUDIO API SOUND ENGINE
+         Soft rainfall at top -> Ominous sub-bass drone & metallic clanks below
+         ---------------------------------------------------------------------- */
+      const audioToggleBtn = document.getElementById('audioToggleBtn');
+      const audioToggleLabel = document.getElementById('audioToggleLabel');
+      const audioIndicatorDot = document.getElementById('audioIndicatorDot');
+
+      let audioCtx = null;
+      let isAudioOn = false;
+      let rainGainNode = null;
+      let droneGainNode = null;
+      let droneFilterNode = null;
+      let clankInterval = null;
+
+      function initWebAudio() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+
+        // 1. Synthesize Pink Noise Buffer for Authentic Rainfall
+        const bufferSize = 2 * audioCtx.sampleRate;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+          output[i] *= 0.04;
+          b6 = white * 0.115926;
+        }
+
+        const whiteNoise = audioCtx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const rainFilter = audioCtx.createBiquadFilter();
+        rainFilter.type = 'bandpass';
+        rainFilter.frequency.value = 1150;
+        rainFilter.Q.value = 0.65;
+
+        rainGainNode = audioCtx.createGain();
+        rainGainNode.gain.value = 0.22;
+
+        whiteNoise.connect(rainFilter);
+        rainFilter.connect(rainGainNode);
+        rainGainNode.connect(audioCtx.destination);
+        whiteNoise.start(0);
+
+        // 2. Synthesize Ominous Sub-Bass Dread Drone (Dual Detuned Oscillators)
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc2.type = 'triangle';
+        osc1.frequency.value = 43.5;
+        osc2.frequency.value = 45.2;
+
+        droneFilterNode = audioCtx.createBiquadFilter();
+        droneFilterNode.type = 'lowpass';
+        droneFilterNode.frequency.value = 95;
+
+        droneGainNode = audioCtx.createGain();
+        droneGainNode.gain.value = 0.0;
+
+        osc1.connect(droneFilterNode);
+        osc2.connect(droneFilterNode);
+        droneFilterNode.connect(droneGainNode);
+        droneGainNode.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+
+        // 3. Occasional Distant Metallic Zipper / Pipe Clanks in Lower Sections
+        clankInterval = setInterval(() => {
+          if (isAudioOn && currentScrollProgress > 0.52 && Math.random() < 0.45) {
+            triggerMetallicClank();
+          }
+        }, 4800);
+      }
+
+      function triggerMetallicClank() {
+        if (!audioCtx || !isAudioOn) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(190 + Math.random() * 140, now);
+        osc.frequency.exponentialRampToValueAtTime(52, now + 0.35);
+
+        filter.type = 'bandpass';
+        filter.frequency.value = 620;
+        filter.Q.value = 6;
+
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.45);
+      }
+
+      function updateAudioForScroll(progress) {
+        if (!audioCtx || !isAudioOn) return;
+        const now = audioCtx.currentTime;
+
+        // Rain softens slightly as you descend indoors/underground
+        const targetRainGain = lerp(0.24, 0.07, progress);
+        rainGainNode.gain.setTargetAtTime(targetRainGain, now, 0.15);
+
+        // Dread sub-bass swells dramatically after 35% scroll
+        const droneFactor = progress < 0.35 ? 0 : (progress - 0.35) / 0.65;
+        const targetDroneGain = Math.min(0.28, droneFactor * 0.28);
+        const targetCutoff = lerp(85, 195, droneFactor);
+
+        droneGainNode.gain.setTargetAtTime(targetDroneGain, now, 0.2);
+        droneFilterNode.frequency.setTargetAtTime(targetCutoff, now, 0.2);
+      }
+
+      audioToggleBtn.addEventListener('click', () => {
+        if (!audioCtx) {
+          initWebAudio();
+        }
+
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        isAudioOn = !isAudioOn;
+
+        if (isAudioOn) {
+          audioToggleLabel.textContent = 'Ambient Rain: ON';
+          audioIndicatorDot.classList.remove('bg-zinc-500');
+          audioIndicatorDot.classList.add('bg-red-500', 'animate-pulse');
+          updateAudioForScroll(currentScrollProgress);
+        } else {
+          audioToggleLabel.textContent = 'Ambient Rain: OFF';
+          audioIndicatorDot.classList.add('bg-zinc-500');
+          audioIndicatorDot.classList.remove('bg-red-500', 'animate-pulse');
+          if (rainGainNode && droneGainNode) {
+            const now = audioCtx.currentTime;
+            rainGainNode.gain.setTargetAtTime(0, now, 0.1);
+            droneGainNode.gain.setTargetAtTime(0, now, 0.1);
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
